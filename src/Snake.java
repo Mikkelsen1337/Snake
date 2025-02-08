@@ -5,12 +5,18 @@ import java.util.List;
 public class Snake {
     private final int TILE_SIZE = 25;
     private String direction = "RIGHT";
+    private String pendingDirection = null;
     private List<Point> body;
 
     public Snake(int startX, int startY) {
         body = new ArrayList<>();
         body.add(new Point(startX, startY));
     }
+
+    public String getDirection() {
+        return direction;
+    }
+
 
     public void move() {
         Point head = body.get(0);

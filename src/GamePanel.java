@@ -7,38 +7,63 @@ import java.awt.event.KeyEvent;
 import javax.swing.Timer;
 
 
+
 public class GamePanel extends JPanel implements ActionListener {
     private final int TILE_SIZE = 25;
-    private final int SCREEN_WIDTH = 800;
-    private final int SCREEN_HEIGHT = 800;
     private Food food;
+    private int SCREEN_WIDTH;
+    private int SCREEN_HEIGHT;
     private Timer timer;
     private Timer tickCount;
+    private Timer speedUp;
     private Snake snake;
     private String valg;
     private boolean gameOver = false;
+    private boolean isSpeeding = false;
     private int score = 0;
 
     public GamePanel() {
-        this.setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        int screenWidth = (int) screenSize.getWidth();
+        int screenHeight = (int) screenSize.getHeight();
+        SCREEN_WIDTH = (int) (screenWidth * 0.8);
+        SCREEN_HEIGHT = (int) (screenHeight * 0.8);
         this.setBackground(Color.darkGray);
         this.setFocusable(true);
         this.addKeyListener(new KeyHandler());
         this.setDoubleBuffered(true);
+        this.setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
         snake = new Snake((SCREEN_WIDTH / 2) / TILE_SIZE * TILE_SIZE, (SCREEN_HEIGHT / 2) / TILE_SIZE * TILE_SIZE);
         food = new Food(TILE_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT);
         timer = new Timer(16, e -> {
             repaint();
         });
 
-        tickCount = new Timer(100, e -> {
+        speedUp = new Timer(80, e -> {
             snake.move();
             checkFoodCollision();
             checkWallCollision();
         });
 
+        tickCount = new Timer(100, e -> {
+            snake.move();
+            checkFoodCollision();
+            checkWallCollision();
+            checkSnakeCollision();
+        });
+
         timer.start();
         tickCount.start();
+    }
+
+    public void updateSize(int width, int height) {
+        this.SCREEN_WIDTH = width;
+        this.SCREEN_HEIGHT = height;
+        this.setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
+        this.revalidate();
+        repaint();
+
+
     }
 
     private void showScore(Graphics g) {
@@ -46,7 +71,6 @@ public class GamePanel extends JPanel implements ActionListener {
             g.setColor(Color.cyan);
             g.setFont(new Font("Times New Roman", Font.BOLD, 15));
             g.drawString("Score: " + (snake.getBody().size() - 1), 50, 50);
-            repaint();
         }
 
 
@@ -80,9 +104,19 @@ public class GamePanel extends JPanel implements ActionListener {
             food.spawnNewFood();
         }
     }
+    private void checkSnakeCollision() {
+        Point head = snake.getHead();
+            for (int i = 1; i < snake.getBody().size() - 1; i++) {
+                if (head.equals(snake.getBody().get(i))) {
+                    gameOver();
+                    return;
+                }
+            }
+
+    }
     private void checkWallCollision(){
         Point head = snake.getHead();
-        if (head.x < 0 || head.x >= SCREEN_WIDTH || head.y < 0 || head.y >= SCREEN_HEIGHT) {
+        if (head.x < 0 || head.x >= SCREEN_WIDTH || head.y < 0 || head.y + TILE_SIZE > SCREEN_HEIGHT) {
             gameOver();
         }
     }
@@ -93,7 +127,8 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     private void draw(Graphics g) {
-    snake.draw(g);
+
+        snake.draw(g);
     }
 
     @Override
@@ -105,22 +140,48 @@ public class GamePanel extends JPanel implements ActionListener {
         @Override
         public void keyPressed(KeyEvent e) {
             if (!gameOver) {
-            switch (e.getKeyCode()) {
-                case KeyEvent.VK_W:
-                    snake.setDirection("UP");
-                break;
-                case KeyEvent.VK_S:
-                    snake.setDirection("DOWN");
-                break;
-                case KeyEvent.VK_A:
-                    snake.setDirection("LEFT");
-                    break;
-                case KeyEvent.VK_D:
-                    snake.setDirection("RIGHT");
-                break;
-            }
+                String currentDirection = snake.getDirection();
+
+                switch (e.getKeyCode()) {
+                    case KeyEvent.VK_W:
+                        if (!currentDirection.equals("DOWN")) {
+                            snake.setDirection("UP");
+                        }
+                        break;
+                    case KeyEvent.VK_S:
+                        if (!currentDirection.equals("UP")) {
+                            snake.setDirection("DOWN");
+                        }
+                        break;
+                    case KeyEvent.VK_A:
+                        if (!currentDirection.equals("RIGHT")) {
+                            snake.setDirection("LEFT");
+                        }
+                        break;
+                    case KeyEvent.VK_D:
+                        if (!currentDirection.equals("LEFT")) {
+                            snake.setDirection("RIGHT");
+                        }
+                        break;
+                    case KeyEvent.VK_SHIFT:
+                        if (!isSpeeding) {
+                            isSpeeding = true;
+                            speedUp.start();
+                        }
+                        break;
+                }
             } else if (e.getKeyCode() == KeyEvent.VK_R) {
             redo();
+            }
+        }
+
+        @Override
+        public void keyReleased(KeyEvent e) {
+            if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
+               if (isSpeeding) {
+                   isSpeeding = false;
+                   speedUp.stop();
+               }
             }
         }
     }
